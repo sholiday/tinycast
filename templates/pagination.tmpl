@@ -1,0 +1,33 @@
+{{$p := .pagination}}
+{{$q := .query}}
+<nav aria-label="Search results pagination">
+  <ul class="pagination">
+  {{ if gt $p.CurrentPage 0 }}
+    <li class="page-item">
+      <a class="page-link" href="/?q={{$q}}&p={{$p.PreviousPage}}">&laquo;</a>
+    </li>
+  {{ else }}
+    <li class="page-item disabled">
+      <span class="page-link">&laquo;</span>
+    </li>
+  {{ end }}
+  {{range $index, $el := $p.Pages}}
+    <li class="page-item {{if eq $p.CurrentPage $el.Num}}active{{end}}">
+      {{if eq $p.CurrentPage $el.Num}}
+        <span class="page-link">{{$el.Title}}</span>
+      {{else}}
+        <a class="page-link" href="/?q={{$q}}&p={{$el.Num}}">{{$el.Title}}</a>
+      {{end}}
+    </li>
+  {{end}}
+  {{ if lt $p.CurrentPage $p.LastPage }}
+    <li class="page-item">
+      <a class="page-link" href="/?q={{$q}}&p={{$p.NextPage}}">&raquo;</a>
+    </li>
+  {{ else }}
+    <li class="page-item disabled">
+      <span class="page-link">&raquo;</span>
+    </li>
+  {{ end }}
+  </ul>
+</nav>

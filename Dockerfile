@@ -33,4 +33,6 @@ RUN set -x && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -
 COPY --from=builder /app/cmd/server /app/cmd/server
 
 # Run the web service on container startup.
+ENV PORT=8082
+EXPOSE 8082
 CMD ["/app/cmd/server"]

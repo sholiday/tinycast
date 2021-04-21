@@ -41,6 +41,7 @@
   </thead>
   <tbody>
     {{$applePodcastUrl := .applePodcastUrl}}
+    {{$apiKey := .apiKey}}
     {{range .searchResults}}
     <tr>
       <td><img src="{{.Image}}" class="img-thumbnail" alt="{{.Title}} Logo" style="max-width: 200px;" /></td>
@@ -48,6 +49,7 @@
       <td>{{.Description}}
 
       <form action="/feed" method="GET">
+        <input type="hidden" name="key" value="{{$apiKey}}">
         <input type="hidden" name="url" value="{{.URL}}">
         <div class="row">
           <div class="col col-md-2">

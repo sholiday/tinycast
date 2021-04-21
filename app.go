@@ -1,6 +1,8 @@
 package tinycast
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"html/template"
@@ -8,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+
 	"time"
 
 	_ "net/http/pprof"
@@ -25,16 +28,27 @@ import (
 type App struct {
 	BaseUrl url.URL
 	cache   *cache.Cache
+	apiKey  string
 }
 
-func NewApp(baseUrl url.URL) *App {
+func hashApiKey(in string) string {
+	h := sha1.New()
+	return hex.EncodeToString(h.Sum([]byte(in)))
+}
+
+func NewApp(baseUrl url.URL, apiKey string) *App {
 	return &App{
 		BaseUrl: baseUrl,
 		cache:   cache.New(5*time.Minute, 10*time.Minute),
+		apiKey:  hashApiKey(apiKey),
 	}
 }
 
 func (a *App) Get(c *gin.Context) {
+	if !a.verifyApiKey(c) {
+		c.Status(http.StatusForbidden)
+		return
+	}
 	var cfg ConversionConfig
 	var err error
 	if cfg, err = BindConversionConfig(c); err != nil {
@@ -62,6 +76,10 @@ type ConversionConfig struct {
 	BitRateMode BitRateMode
 	BitRate     BitRate
 	ChannelMode mp3.ChannelMode
+}
+
+func (a *App) verifyApiKey(c *gin.Context) bool {
+	return a.apiKey == c.Query("key")
 }
 
 func BindConversionConfig(c *gin.Context) (ConversionConfig, error) {
@@ -92,6 +110,10 @@ func (cfg ConversionConfig) ToQueryValues() url.Values {
 }
 
 func (a *App) Feed(c *gin.Context) {
+	if !a.verifyApiKey(c) {
+		c.Status(http.StatusForbidden)
+		return
+	}
 	var cfg ConversionConfig
 	var err error
 	if cfg, err = BindConversionConfig(c); err != nil {
@@ -99,6 +121,7 @@ func (a *App) Feed(c *gin.Context) {
 		return
 	}
 	qr := cfg.ToQueryValues()
+	qr.Add("key", a.apiKey)
 	resp, err := http.Get(cfg.Url)
 	if err != nil {
 		log.Println(err)
@@ -197,5 +220,6 @@ func (a *App) Home(c *gin.Context) {
 		"bitRateModes":    BitRateModes,
 		"bitRates":        BitRates,
 		"applePodcastUrl": template.URL(podcastUrl.String()),
+		"apiKey":          a.apiKey,
 	})
 }

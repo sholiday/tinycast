@@ -64,7 +64,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	app := tinycast.NewApp(*baseUrl)
+	apiKey := os.Getenv("API_KEY")
+	app := tinycast.NewApp(*baseUrl, apiKey)
 	r.GET("/", app.Home)
 	r.GET("/convert.mp3", app.Get)
 	r.GET("/feed", app.Feed)

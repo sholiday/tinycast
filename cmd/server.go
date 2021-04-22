@@ -78,7 +78,7 @@ func main() {
 	apiKey := os.Getenv("API_KEY")
 	app := tinycast.NewApp(*baseUrl, apiKey)
 	r.GET("/", app.Home)
-	r.GET("/convert.mp3", app.Get)
+	r.GET("/convert.mp3", app.Convert)
 	r.GET("/feed", app.Feed)
 	r.Use(static.Serve("/", EmbedFolder(tinycast.Templates, "templates/favicon")))
 

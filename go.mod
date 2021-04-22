@@ -7,7 +7,6 @@ require (
 	github.com/beevik/etree v1.1.0
 	github.com/gin-contrib/static v0.0.1
 	github.com/gin-gonic/gin v1.7.1
-	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.4
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	pipelined.dev/audio/mp3 v0.6.1

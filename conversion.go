@@ -8,29 +8,32 @@ import (
 	"net/http"
 	"strconv"
 
-	_ "net/http/pprof"
-
 	"pipelined.dev/audio/mp3"
 	"pipelined.dev/pipe"
 )
 
+// BitRateMode describes how the MP3 encoder should apply bit rate limits.
 type BitRateMode string
 
+// BitRateModes are the modes accepted by the encoder.
 var BitRateModes = []BitRateMode{
 	"ABR",
 	"CBR",
 	"VBR",
 }
 
+// ParseBitRateMode returns a BitRateMode if it matches the given string or an
+// error.
 func ParseBitRateMode(in string) (BitRateMode, error) {
 	for _, m := range BitRateModes {
 		if in == string(m) {
 			return m, nil
 		}
 	}
-	return BitRateModes[0], fmt.Errorf("Invalid bit rate mode '%s'.", in)
+	return BitRateModes[0], fmt.Errorf("invalid bit rate mode '%s'", in)
 }
 
+// ToMp3BitRateMode converts a BitRateMode and BitRate to an mp3.BitRateMode.
 func (brm BitRateMode) ToMp3BitRateMode(br BitRate) mp3.BitRateMode {
 	switch brm {
 	case BitRateModes[0]:
@@ -45,44 +48,50 @@ func (brm BitRateMode) ToMp3BitRateMode(br BitRate) mp3.BitRateMode {
 	}
 }
 
+// BitRate used to encode an audio file.
 type BitRate int
 
+// BitRates supported by the MP3 encoder.
 var BitRates = []BitRate{
 	16,
 	32,
 	64,
 }
 
+// ParseBitRate converts a string version of BitRate.
 func ParseBitRate(in string) (BitRate, error) {
 	for _, m := range BitRates {
 		if in == m.ToString() {
 			return m, nil
 		}
 	}
-	return BitRates[0], fmt.Errorf("Invalid bit rate '%s'.", in)
+	return BitRates[0], fmt.Errorf("invalid bit rate '%s'", in)
 }
 
+// ToString returns a string version of the BitRate.
 func (br BitRate) ToString() string {
 	return strconv.FormatInt(int64(br), 10)
 }
 
+// ChannelModes supported by the MP3 encoder.
 var ChannelModes = []mp3.ChannelMode{
 	mp3.Mono,
 	mp3.Stereo,
 	mp3.JointStereo,
 }
 
+// ParseChannelMode translates from the string version of a ChannelMode.
 func ParseChannelMode(in string) (mp3.ChannelMode, error) {
 	for _, m := range ChannelModes {
 		if in == m.String() {
 			return m, nil
 		}
 	}
-	return ChannelModes[0], fmt.Errorf("Invalid channel mode '%s'.", in)
+	return ChannelModes[0], fmt.Errorf("invalid channel mode '%s'", in)
 }
 
 func transform(c context.Context, cfg ConversionConfig, out io.Writer) error {
-	resp, err := http.Get(cfg.Url)
+	resp, err := http.Get(cfg.URL)
 	if err != nil {
 		return err
 	}

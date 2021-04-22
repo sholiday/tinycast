@@ -38,8 +38,19 @@ func EmbedFolder(fsEmbed embed.FS, targetPath string) static.ServeFileSystem {
 	}
 }
 
+func maybeStartStatusServer() {
+	host := os.Getenv("DEBUG_HOST")
+	port := os.Getenv("DEBUG_PORT")
+	if port != "" {
+		statusHostPort := fmt.Sprintf("%s:%s", host, port)
+		log.Printf("Launching status server at '%s", statusHostPort)
+		go http.ListenAndServe(statusHostPort, http.DefaultServeMux)
+	}
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	maybeStartStatusServer()
 
 	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")

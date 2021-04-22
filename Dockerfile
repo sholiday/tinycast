@@ -34,5 +34,6 @@ COPY --from=builder /app/cmd/server /app/cmd/server
 
 # Run the web service on container startup.
 ENV PORT=8082
+ENV GIN_MODE=release
 EXPOSE 8082
 CMD ["/app/cmd/server"]

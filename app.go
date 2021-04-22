@@ -32,8 +32,8 @@ type App struct {
 }
 
 func hashApiKey(in string) string {
-	h := sha1.New()
-	return hex.EncodeToString(h.Sum([]byte(in)))
+	by := sha1.Sum([]byte(in))
+	return hex.EncodeToString(by[:])
 }
 
 func NewApp(baseUrl url.URL, apiKey string) *App {

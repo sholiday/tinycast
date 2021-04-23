@@ -28,10 +28,10 @@ func removeAttr(as []etree.Attr, attrName string) []etree.Attr {
 	return as[:j]
 }
 
-func replace(doc *etree.Document, element string, baseUrl url.URL, qr url.Values) {
+func replace(doc *etree.Document, element string, baseURL url.URL, qr url.Values) {
 	for _, t := range doc.FindElements(element) {
 		modifyAttr(t.Attr, "url", func(v string) string {
-			bU := baseUrl
+			bU := baseURL
 			query := qr
 			query.Set("url", v)
 			bU.RawQuery = query.Encode()

@@ -13,8 +13,6 @@ import (
 
 	"time"
 
-	_ "net/http/pprof"
-
 	podgrabm "github.com/akhilrex/podgrab/model"
 	podgrabs "github.com/akhilrex/podgrab/service"
 	"github.com/patrickmn/go-cache"
@@ -25,27 +23,30 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+// App is the core tinycast web app with handlers and state.
 type App struct {
-	BaseUrl url.URL
+	baseURL url.URL
 	cache   *cache.Cache
 	apiKey  string
 }
 
-func hashApiKey(in string) string {
+func hashAPIKey(in string) string {
 	by := sha1.Sum([]byte(in))
 	return hex.EncodeToString(by[:])
 }
 
-func NewApp(baseUrl url.URL, apiKey string) *App {
+// NewApp returns a new App based on configuration.
+func NewApp(baseURL url.URL, apiKey string) *App {
 	return &App{
-		BaseUrl: baseUrl,
+		baseURL: baseURL,
 		cache:   cache.New(5*time.Minute, 10*time.Minute),
-		apiKey:  hashApiKey(apiKey),
+		apiKey:  hashAPIKey(apiKey),
 	}
 }
 
-func (a *App) Get(c *gin.Context) {
-	if !a.verifyApiKey(c) {
+// Convert is a handler which re-encodes an audio stream to MP3 on the fly.
+func (a *App) Convert(c *gin.Context) {
+	if !a.verifyAPIKey(c) {
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -71,22 +72,25 @@ func (a *App) Get(c *gin.Context) {
 	}
 }
 
+// ConversionConfig holds the desired conversion for an audio file.
 type ConversionConfig struct {
-	Url         string
+	URL         string
 	BitRateMode BitRateMode
 	BitRate     BitRate
 	ChannelMode mp3.ChannelMode
 }
 
-func (a *App) verifyApiKey(c *gin.Context) bool {
+func (a *App) verifyAPIKey(c *gin.Context) bool {
 	return a.apiKey == c.Query("key")
 }
 
+// BindConversionConfig captures and validates a ConversionConfig passed in
+// query parameters.
 func BindConversionConfig(c *gin.Context) (ConversionConfig, error) {
 	var cfg ConversionConfig
 	var err error
 
-	if cfg.Url = c.Query("url"); cfg.Url == "" {
+	if cfg.URL = c.Query("url"); cfg.URL == "" {
 		return cfg, fmt.Errorf("url required")
 	}
 	if cfg.BitRateMode, err = ParseBitRateMode(c.Query("bitRateMode")); err != nil {
@@ -101,6 +105,8 @@ func BindConversionConfig(c *gin.Context) (ConversionConfig, error) {
 	return cfg, nil
 }
 
+// ToQueryValues translates a ConversionCongig to the same query parameters
+// expected by BindConversionConfig.
 func (cfg ConversionConfig) ToQueryValues() url.Values {
 	q := url.Values{}
 	q.Add("bitRateMode", string(cfg.BitRateMode))
@@ -109,8 +115,10 @@ func (cfg ConversionConfig) ToQueryValues() url.Values {
 	return q
 }
 
+// Feed is a handler which replaces all download entries in a podcast feed with
+// a URL handled by the Conversion handler.
 func (a *App) Feed(c *gin.Context) {
-	if !a.verifyApiKey(c) {
+	if !a.verifyAPIKey(c) {
 		c.Status(http.StatusForbidden)
 		return
 	}
@@ -122,23 +130,35 @@ func (a *App) Feed(c *gin.Context) {
 	}
 	qr := cfg.ToQueryValues()
 	qr.Add("key", a.apiKey)
-	resp, err := http.Get(cfg.Url)
+	resp, err := http.Get(cfg.URL)
 	if err != nil {
 		log.Println(err)
+		c.Status(http.StatusInternalServerError)
+		return
 	}
 	defer resp.Body.Close()
 
 	doc := etree.NewDocument()
 	_, err = doc.ReadFrom(resp.Body)
-	replace(doc, "//enclosure", a.BaseUrl, qr)
-	replace(doc, "//media:content", a.BaseUrl, qr)
+	if err != nil {
+		log.Println(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+	replace(doc, "//enclosure", a.baseURL, qr)
+	replace(doc, "//media:content", a.baseURL, qr)
 	for _, t := range doc.FindElements("//channel/title") {
 		t.SetText(fmt.Sprintf("(Tiny) %s", t.Text()))
 	}
 	for _, t := range doc.FindElements("//item/title") {
 		t.SetText(fmt.Sprintf("(Tiny) %s", t.Text()))
 	}
-	doc.WriteTo(c.Writer)
+	_, err = doc.WriteTo(c.Writer)
+	if err != nil {
+		log.Println("Failed to finish writing feed:", err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 }
 
 func (a *App) search(query string) ([]*podgrabm.CommonSearchResultModel, error) {
@@ -150,8 +170,7 @@ func (a *App) search(query string) ([]*podgrabm.CommonSearchResultModel, error) 
 			return v, nil
 		}
 	}
-	var searcher podgrabs.SearchService
-	searcher = new(podgrabs.PodcastIndexService)
+	searcher := new(podgrabs.PodcastIndexService)
 	results := searcher.Query(query)
 
 	// Cleanup the HTML in the podcast descriptions.
@@ -170,6 +189,7 @@ func sanitizeString(input string) string {
 	return bmStrictPolicy.Sanitize(input)
 }
 
+// Home is a handler which allows users to search for podcasts to subscribe to.
 func (a *App) Home(c *gin.Context) {
 	query := c.Query("q")
 	var results []*podgrabm.CommonSearchResultModel
@@ -194,7 +214,6 @@ func (a *App) Home(c *gin.Context) {
 			curPage:      int(currentPage),
 		}
 		if int(currentPage) > p.NumPages() {
-			currentPage = 0
 			p.curPage = 0
 		}
 
@@ -205,10 +224,10 @@ func (a *App) Home(c *gin.Context) {
 		results = results[p.FirstItem():lastOffset]
 	}
 
-	podcastUrl := a.BaseUrl
-	podcastUrl.Scheme = "podcast"
-	podcastUrl.Path = "/feed"
-	log.Println(podcastUrl.String())
+	podcastURL := a.baseURL
+	podcastURL.Scheme = "podcast"
+	podcastURL.Path = "/feed"
+	log.Println(podcastURL.String())
 
 	c.HTML(http.StatusOK, "main.tmpl", gin.H{
 		"title":           "TinyCast",
@@ -219,7 +238,7 @@ func (a *App) Home(c *gin.Context) {
 		"channelModes":    ChannelModes,
 		"bitRateModes":    BitRateModes,
 		"bitRates":        BitRates,
-		"applePodcastUrl": template.URL(podcastUrl.String()),
+		"applePodcastUrl": template.URL(podcastURL.String()),
 		"apiKey":          a.apiKey,
 	})
 }

@@ -12,8 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+
     - name: Install lame
       run: sudo apt-get install libmp3lame-dev
+
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
@@ -24,3 +26,8 @@ jobs:
 
     - name: Test
       run: go test -v ./...
+
+    - name: Lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.39

@@ -2,9 +2,7 @@ name: Go
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
 
@@ -27,17 +25,3 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-  golangci:
-    name: lint
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-
-    - name: Install lame
-      run: sudo apt-get install libmp3lame-dev
-
-    - name: golangci-lint
-      uses: golangci/golangci-lint-action@v2
-      with:
-        # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
-        version: v1.29

@@ -146,7 +146,10 @@ func (a *App) Feed(c *gin.Context) {
 	for _, t := range doc.FindElements("//item/title") {
 		t.SetText(fmt.Sprintf("(Tiny) %s", t.Text()))
 	}
-	doc.WriteTo(c.Writer)
+	_, err = doc.WriteTo(c.Writer)
+	if err != nil {
+		log.Println("Failed to finish writing feed:", err)
+	}
 }
 
 func (a *App) search(query string) ([]*podgrabm.CommonSearchResultModel, error) {

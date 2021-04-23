@@ -25,3 +25,35 @@ much smaller file to the client.
 ![Example of search results](/doc/screenshots/search.png)
 
 ![Example of a podcast feed in Apple Podcasts](/doc/screenshots/apple-podcast.png)
+
+## Deployment
+
+### Docker
+
+An example `Dockerfile`.
+
+```Dockerfile
+docker run -d \
+  --name=tinycast \
+  -e PORT=8082 \
+  -e BASE_URL="http://example.com:8082/" \
+  -p 8082:8082 \
+  --restart unless-stopped \
+  sholiday/tinycast
+```
+
+### Docker Compose
+
+An example `docker-compose.yml`.
+
+```yaml
+---
+version: "3"
+services:
+  tinycast:
+    image: sholiday/tinycast:latest
+    restart: unless-stopped
+    environment:
+      - BASE_URL=https://tinycast.example.com/
+      - API_KEY=AUniqueStringForTheDeployment
+```

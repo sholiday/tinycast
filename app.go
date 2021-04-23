@@ -133,11 +133,18 @@ func (a *App) Feed(c *gin.Context) {
 	resp, err := http.Get(cfg.URL)
 	if err != nil {
 		log.Println(err)
+		c.Status(http.StatusInternalServerError)
+		return
 	}
 	defer resp.Body.Close()
 
 	doc := etree.NewDocument()
 	_, err = doc.ReadFrom(resp.Body)
+	if err != nil {
+		log.Println(err)
+		c.Status(http.StatusInternalServerError)
+		return
+	}
 	replace(doc, "//enclosure", a.baseURL, qr)
 	replace(doc, "//media:content", a.baseURL, qr)
 	for _, t := range doc.FindElements("//channel/title") {
@@ -149,6 +156,8 @@ func (a *App) Feed(c *gin.Context) {
 	_, err = doc.WriteTo(c.Writer)
 	if err != nil {
 		log.Println("Failed to finish writing feed:", err)
+		c.Status(http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -161,8 +170,7 @@ func (a *App) search(query string) ([]*podgrabm.CommonSearchResultModel, error) 
 			return v, nil
 		}
 	}
-	var searcher podgrabs.SearchService
-	searcher = new(podgrabs.PodcastIndexService)
+	searcher := new(podgrabs.PodcastIndexService)
 	results := searcher.Query(query)
 
 	// Cleanup the HTML in the podcast descriptions.
@@ -206,7 +214,6 @@ func (a *App) Home(c *gin.Context) {
 			curPage:      int(currentPage),
 		}
 		if int(currentPage) > p.NumPages() {
-			currentPage = 0
 			p.curPage = 0
 		}
 

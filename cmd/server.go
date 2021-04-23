@@ -22,10 +22,7 @@ type embedFileSystem struct {
 
 func (e embedFileSystem) Exists(prefix string, path string) bool {
 	_, err := e.Open(path)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func EmbedFolder(fsEmbed embed.FS, targetPath string) static.ServeFileSystem {
@@ -41,16 +38,18 @@ func EmbedFolder(fsEmbed embed.FS, targetPath string) static.ServeFileSystem {
 func maybeStartStatusServer() {
 	host := os.Getenv("DEBUG_HOST")
 	port := os.Getenv("DEBUG_PORT")
-	if port != "" {
-		statusHostPort := fmt.Sprintf("%s:%s", host, port)
-		log.Printf("Launching status server at '%s", statusHostPort)
-		go http.ListenAndServe(statusHostPort, http.DefaultServeMux)
+	if port == "" {
+		return
 	}
+	statusHostPort := fmt.Sprintf("%s:%s", host, port)
+	log.Printf("Launching status server at '%s", statusHostPort)
+	err := http.ListenAndServe(statusHostPort, http.DefaultServeMux)
+	log.Println(err)
 }
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	maybeStartStatusServer()
+	go maybeStartStatusServer()
 
 	host := os.Getenv("HOST")
 	port := os.Getenv("PORT")
@@ -84,5 +83,6 @@ func main() {
 
 	log.Printf("About to start main server at '%s'", serverBind)
 
-	r.Run(serverBind)
+	err = r.Run(serverBind)
+	log.Fatal(err)
 }
